@@ -60,27 +60,17 @@
     //set targets and actions
     [self.backButton setTitle:@"Back"
                      forState:UIControlStateNormal];
-    [self.backButton addTarget:self.webview
-                        action:@selector(goBack)
-              forControlEvents:UIControlEventTouchUpInside];
     
     [self.forwardButton setTitle:@"Forward"
                      forState:UIControlStateNormal];
-    [self.forwardButton addTarget:self.webview
-                        action:@selector(goForward)
-              forControlEvents:UIControlEventTouchUpInside];
     
     [self.stopButton setTitle:@"Stop"
                      forState:UIControlStateNormal];
-    [self.stopButton addTarget:self.webview
-                        action:@selector(stopLoading)
-              forControlEvents:UIControlEventTouchUpInside];
     
     [self.refreshButton setTitle:@"Refresh"
                         forState:UIControlStateNormal];
-    [self.refreshButton addTarget:self.webview
-                           action:@selector(reload)
-                 forControlEvents:UIControlEventTouchUpInside];
+
+    [self addButtonTargets];
     
     //add the subviews to the main view
     for (UIView *viewToAdd in @[self.webview, self.textField, self.backButton, self.forwardButton, self.stopButton, self.refreshButton]) {
@@ -94,6 +84,11 @@
     
     self.activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:self.activityIndicator];
+    
+    //Dispaly a welcome message
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Welcome!" message:@"Get excited to use the best web browser ever!" delegate:nil cancelButtonTitle:@"OK, I'm excited!" otherButtonTitles:nil];
+    
+    [alert show];
 }
 
 - (void) viewWillLayoutSubviews {
@@ -115,6 +110,34 @@
         thisButton.frame = CGRectMake(currentButtonX, CGRectGetMaxY(self.webview.frame), buttonWidth, itemHeight);
         currentButtonX += buttonWidth;
     }
+}
+
+- (void) resetWebView {
+    [self.webview removeFromSuperview];
+    
+    UIWebView *newWebView = [[UIWebView alloc] init];
+    newWebView.delegate = self;
+    [self.view addSubview:newWebView];
+    
+    self.webview = newWebView;
+    
+    [self addButtonTargets];
+    
+    self.textField.text = nil;
+    [self updateButtonsAndTitle];
+}
+
+//We need this method because the buttons will point to the old web view. If we don't tell them when we switch the web view, they will try to communicate with a web view that no longer exists, and cause a crash.
+- (void) addButtonTargets {
+    //loop through all four of our buttons and remove the reference to the old web view
+    for (UIButton *button in @[self.backButton, self.forwardButton, self.stopButton, self.refreshButton]) {
+        [button removeTarget:nil action:NULL forControlEvents:UIControlEventTouchUpInside];
+    }
+    
+    [self.backButton addTarget:self.webview action:@selector(goBack) forControlEvents:UIControlEventTouchUpInside];
+    [self.forwardButton addTarget:self.webview action:@selector(goForward) forControlEvents:UIControlEventTouchUpInside];
+    [self.stopButton addTarget:self.webview action:@selector(stopLoading) forControlEvents:UIControlEventTouchUpInside];
+    [self.refreshButton addTarget:self.webview action:@selector(reload) forControlEvents:UIControlEventTouchUpInside];
 }
 
 #pragma mark - UITextFieldDelegate
@@ -196,7 +219,7 @@
     self.backButton.enabled = [self.webview canGoBack];
     self.forwardButton.enabled = [self.webview canGoForward];
     self.stopButton.enabled = self.frameCount > 0;
-    self.refreshButton.enabled = self.frameCount == 0;
+    self.refreshButton.enabled = self.webview.request.URL && self.frameCount == 0;
 }
 
 @end
