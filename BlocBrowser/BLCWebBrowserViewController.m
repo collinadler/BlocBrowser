@@ -33,11 +33,11 @@
     //create the main container view
     UIView *mainView = [[UIView alloc] init];
     self.view = mainView;
-
+    
     //create the subviews (also use our view controller as the delegate for the UIWebView)
     self.webview = [[UIWebView alloc] init];
     self.webview.delegate = self;
-
+    
     self.textField = [[UITextField alloc] init];
     self.textField.keyboardType = UIKeyboardTypeURL;
     self.textField.returnKeyType = UIReturnKeyDone;
@@ -63,6 +63,8 @@
     self.activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:self.activityIndicator];
     
+    
+    
     //Dispaly a welcome message
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Welcome!" message:@"Get excited to use the best web browser ever!" delegate:nil cancelButtonTitle:@"OK, I'm excited!" otherButtonTitles:nil];
     
@@ -76,13 +78,13 @@
     static const CGFloat itemHeight = 50; //`static` keeps the value the same between invocations of the method. `const` tells the compiler that this value won't change, allowing for additional speed optimizations
     CGFloat width = CGRectGetWidth(self.view.bounds);
     CGFloat browserHeight = CGRectGetHeight(self.view.bounds) - itemHeight;
-    CGFloat toolbarWidth = CGRectGetWidth(self.view.bounds) * 0.8;
+    CGFloat toolbarWidth = CGRectGetWidth(self.view.bounds) * 0.6;
     
     //now, assign the frames
     self.textField.frame = CGRectMake(0, 0, width, itemHeight);
     self.webview.frame = CGRectMake(0, CGRectGetMaxY(self.textField.frame), width, browserHeight);
     
-    self.awesomeToolbar.frame = CGRectMake(CGRectGetWidth(self.view.bounds) * .1, 100, toolbarWidth, 60);
+    self.awesomeToolbar.frame = CGRectMake(CGRectGetWidth(self.view.bounds) * .2, 100, toolbarWidth, 60);
 }
 
 - (void) resetWebView {
@@ -120,7 +122,7 @@
     } else {
         //There is a space, so perform a search
         NSString *plusString = [URLString stringByReplacingOccurrencesOfString:@" "
-                                                                            withString:@"+"];
+                                                                    withString:@"+"];
         
         NSString *searchString = [NSString stringWithFormat:@"https://www.google.com/search?q=%@", plusString];
         NSURL *URL = [NSURL URLWithString:searchString];
@@ -195,6 +197,34 @@
     if ([title isEqual:kBLCWebBrowserRefreshString]) {
         [self.webview reload];
     }
+}
+
+- (void) floatingToolbar:(BLCAwesomeFloatingToolbar *)toolbar didTryToPanWithOffset:(CGPoint)offset {
+    CGPoint startingPoint = toolbar.frame.origin;
+    CGPoint newPoint = CGPointMake(startingPoint.x + offset.x, startingPoint.y + offset.y);
+    
+    CGRect potentialNewFrame = CGRectMake(newPoint.x, newPoint.y, CGRectGetWidth(toolbar.frame), CGRectGetHeight(toolbar.frame));
+    if (CGRectContainsRect(self.view.bounds, potentialNewFrame)) {
+        toolbar.frame = potentialNewFrame;
+    }
+}
+
+- (void) floatingToolbar:(BLCAwesomeFloatingToolbar *)toolbar didTryToPinchWithScale:(CGFloat)scale {
+    CGFloat oldFrameWidth = toolbar.bounds.size.width;
+    CGFloat oldFrameHeight = toolbar.bounds.size.height;
+    
+    CGRect potentialNewFrameSize = CGRectMake(toolbar.frame.origin.x, toolbar.frame.origin.y, oldFrameWidth * scale, oldFrameHeight * scale);
+    
+    NSLog(@"The old rect: %f(x), %f(y), %f(width), %f(height)", toolbar.frame.origin.x, toolbar.frame.origin.y, toolbar.frame.size.width, toolbar.frame.size.height);
+    NSLog(@"The new rect: %f(x), %f(y), %f(width), %f(height)", toolbar.frame.origin.x, toolbar.frame.origin.y, potentialNewFrameSize.size.width, potentialNewFrameSize.size.height);
+    
+    if (CGRectContainsRect(self.view.bounds, potentialNewFrameSize)) {
+        NSLog(@"Yes, new frame is OK");
+        toolbar.frame = potentialNewFrameSize;
+        NSLog(@"Rect should be: %f(x), %f(y), %f(width), %f(height)", toolbar.frame.origin.x, toolbar.frame.origin.y, potentialNewFrameSize.size.width, potentialNewFrameSize.size.height);
+        NSLog(@"Rect is: %f(x), %f(y), %f(width), %f(height)", toolbar.frame.origin.x, toolbar.frame.origin.y, toolbar.frame.size.width, toolbar.frame.size.height);
+    }
+    
 }
 
 @end

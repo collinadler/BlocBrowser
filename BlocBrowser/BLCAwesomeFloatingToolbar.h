@@ -16,8 +16,11 @@
 
 @optional
 
-//One optional delegate method is declared. If the delegate implements it, it will be called when a user taps a button
+//Optional delegate methods are declared. If the delegate implements it, it will be called when a user taps a button
 - (void) floatingToolbar:(BLCAwesomeFloatingToolbar *)toolbar didSelectButtonWithTitle:(NSString *)title;
+//This method is declared as a delegate method, because the superview (in this case, the webview in the main view controller) should dictate if it wants the toolbar to move around. 
+- (void) floatingToolbar:(BLCAwesomeFloatingToolbar *)toolbar didTryToPanWithOffset:(CGPoint)offset;
+- (void) floatingToolbar:(BLCAwesomeFloatingToolbar *)toolbar didTryToPinchWithScale:(CGFloat)scale;
 
 @end
 
