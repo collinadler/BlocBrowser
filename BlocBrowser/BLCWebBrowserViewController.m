@@ -7,17 +7,19 @@
 //
 
 #import "BLCWebBrowserViewController.h"
+#import "BLCAwesomeFloatingToolbar.h"
 
-@interface BLCWebBrowserViewController () <UIWebViewDelegate, UITextFieldDelegate>
+#define kBLCWebBrowserBackString NSLocalizedString(@"Back", @"Back command")
+#define kBLCWebBrowserForwardString NSLocalizedString(@"Forward", @"Forward command")
+#define kBLCWebBrowserStopString NSLocalizedString(@"Stop", @"Stop command")
+#define kBLCWebBrowserRefreshString NSLocalizedString(@"Refresh", @"Refresh command")
+
+@interface BLCWebBrowserViewController () <UIWebViewDelegate, UITextFieldDelegate, BLCAwesomeFloatingToolbarDelegate>
 
 @property (nonatomic, strong) UIWebView *webview;
 @property (nonatomic, strong) UITextField *textField;
-@property (nonatomic, strong) UIButton *backButton;
-@property (nonatomic, strong) UIButton *forwardButton;
-@property (nonatomic, strong) UIButton *stopButton;
-@property (nonatomic, strong) UIButton *refreshButton;
 @property (nonatomic, strong) UIActivityIndicatorView *activityIndicator;
-
+@property (nonatomic, strong) BLCAwesomeFloatingToolbar *awesomeToolbar;
 @property (nonatomic, assign) NSUInteger frameCount;
 
 @end
@@ -45,35 +47,11 @@
     self.textField.backgroundColor = [UIColor colorWithWhite:220/255.0f alpha:1];
     self.textField.delegate = self;
     
-    self.backButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.backButton setEnabled:NO];
-
-    self.forwardButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.forwardButton setEnabled:NO];
-
-    self.stopButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.stopButton setEnabled:NO];
-
-    self.refreshButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.refreshButton setEnabled:NO];
-
-    //set targets and actions
-    [self.backButton setTitle:@"Back"
-                     forState:UIControlStateNormal];
-    
-    [self.forwardButton setTitle:@"Forward"
-                     forState:UIControlStateNormal];
-    
-    [self.stopButton setTitle:@"Stop"
-                     forState:UIControlStateNormal];
-    
-    [self.refreshButton setTitle:@"Refresh"
-                        forState:UIControlStateNormal];
-
-    [self addButtonTargets];
+    self.awesomeToolbar = [[BLCAwesomeFloatingToolbar alloc] initWithFourTitles:@[kBLCWebBrowserBackString, kBLCWebBrowserForwardString, kBLCWebBrowserStopString, kBLCWebBrowserRefreshString]];
+    self.awesomeToolbar.delegate = self;
     
     //add the subviews to the main view
-    for (UIView *viewToAdd in @[self.webview, self.textField, self.backButton, self.forwardButton, self.stopButton, self.refreshButton]) {
+    for (UIView *viewToAdd in @[self.webview, self.textField, self.awesomeToolbar]) {
         [mainView addSubview:viewToAdd];
     }
 }
@@ -97,19 +75,14 @@
     //first, calculate some dimensions
     static const CGFloat itemHeight = 50; //`static` keeps the value the same between invocations of the method. `const` tells the compiler that this value won't change, allowing for additional speed optimizations
     CGFloat width = CGRectGetWidth(self.view.bounds);
-    CGFloat browserHeight = CGRectGetHeight(self.view.bounds) - itemHeight - itemHeight;
-    CGFloat buttonWidth = CGRectGetWidth(self.view.bounds) / 4;
+    CGFloat browserHeight = CGRectGetHeight(self.view.bounds) - itemHeight;
+    CGFloat toolbarWidth = CGRectGetWidth(self.view.bounds) * 0.8;
     
     //now, assign the frames
     self.textField.frame = CGRectMake(0, 0, width, itemHeight);
     self.webview.frame = CGRectMake(0, CGRectGetMaxY(self.textField.frame), width, browserHeight);
     
-    CGFloat currentButtonX = 0;
-    
-    for (UIButton *thisButton in @[self.backButton, self.forwardButton, self.stopButton, self.refreshButton]) {
-        thisButton.frame = CGRectMake(currentButtonX, CGRectGetMaxY(self.webview.frame), buttonWidth, itemHeight);
-        currentButtonX += buttonWidth;
-    }
+    self.awesomeToolbar.frame = CGRectMake(CGRectGetWidth(self.view.bounds) * .1, 100, toolbarWidth, 60);
 }
 
 - (void) resetWebView {
@@ -121,23 +94,8 @@
     
     self.webview = newWebView;
     
-    [self addButtonTargets];
-    
     self.textField.text = nil;
     [self updateButtonsAndTitle];
-}
-
-//We need this method because the buttons will point to the old web view. If we don't tell them when we switch the web view, they will try to communicate with a web view that no longer exists, and cause a crash.
-- (void) addButtonTargets {
-    //loop through all four of our buttons and remove the reference to the old web view
-    for (UIButton *button in @[self.backButton, self.forwardButton, self.stopButton, self.refreshButton]) {
-        [button removeTarget:nil action:NULL forControlEvents:UIControlEventTouchUpInside];
-    }
-    
-    [self.backButton addTarget:self.webview action:@selector(goBack) forControlEvents:UIControlEventTouchUpInside];
-    [self.forwardButton addTarget:self.webview action:@selector(goForward) forControlEvents:UIControlEventTouchUpInside];
-    [self.stopButton addTarget:self.webview action:@selector(stopLoading) forControlEvents:UIControlEventTouchUpInside];
-    [self.refreshButton addTarget:self.webview action:@selector(reload) forControlEvents:UIControlEventTouchUpInside];
 }
 
 #pragma mark - UITextFieldDelegate
@@ -216,10 +174,27 @@
         [self.activityIndicator stopAnimating];
     }
     
-    self.backButton.enabled = [self.webview canGoBack];
-    self.forwardButton.enabled = [self.webview canGoForward];
-    self.stopButton.enabled = self.frameCount > 0;
-    self.refreshButton.enabled = self.webview.request.URL && self.frameCount == 0;
+    [self.awesomeToolbar setEnabled:[self.webview canGoBack] forButtonWithTitle:kBLCWebBrowserBackString];
+    [self.awesomeToolbar setEnabled:[self.webview canGoForward] forButtonWithTitle:kBLCWebBrowserForwardString];
+    [self.awesomeToolbar setEnabled:self.frameCount > 0 forButtonWithTitle:kBLCWebBrowserStopString];
+    [self.awesomeToolbar setEnabled:self.webview.request.URL && self.frameCount == 0 forButtonWithTitle:kBLCWebBrowserRefreshString];
+}
+
+#pragma mark - BLCAwesomeFloatingToolbarDelegate
+
+- (void) floatingToolbar:(BLCAwesomeFloatingToolbar *)toolbar didSelectButtonWithTitle:(NSString *)title {
+    if ([title isEqual:kBLCWebBrowserBackString]) {
+        [self.webview goBack];
+    }
+    if ([title isEqual:kBLCWebBrowserForwardString]) {
+        [self.webview goForward];
+    }
+    if ([title isEqual:kBLCWebBrowserStopString]) {
+        [self.webview stopLoading];
+    }
+    if ([title isEqual:kBLCWebBrowserRefreshString]) {
+        [self.webview reload];
+    }
 }
 
 @end
